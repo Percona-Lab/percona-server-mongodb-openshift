@@ -57,6 +57,7 @@ done
 ca_crt=/data/configdb/tls.crt
 if [ -f "$ca_crt"  ]; then
     log "Generating certificate"
+	export RANDFILE=/tmp/.rnd
     ca_key=/data/configdb/tls.key
     pem=/work-dir/mongo.pem
     ssl_args=(--ssl --sslCAFile "$ca_crt" --sslPEMKeyFile "$pem")
