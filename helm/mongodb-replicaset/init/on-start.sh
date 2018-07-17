@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+cd /work-dir/
+
 replica_set="$REPLICA_SET"
 script_name=${0##*/}
 
@@ -57,11 +59,11 @@ done
 ca_crt=/data/configdb/tls.crt
 if [ -f "$ca_crt"  ]; then
     log "Generating certificate"
-	export RANDFILE=/tmp/.rnd
+    export RANDFILE=/tmp/.rnd
     ca_key=/data/configdb/tls.key
     pem=/work-dir/mongo.pem
     ssl_args=(--ssl --sslCAFile "$ca_crt" --sslPEMKeyFile "$pem")
-
+    mongod_ssl_args=" --sslMode requireSSL --sslPEMKeyFile $pem  --sslCAFile $ca_crt "
 cat >openssl.cnf <<EOL
 [req]
 req_extensions = v3_req
@@ -80,11 +82,11 @@ DNS.5 = 127.0.0.1
 EOL
 
     # Generate the certs
-    openssl genrsa -out mongo.key 2048
-    openssl req -new -key mongo.key -out mongo.csr -subj "/CN=$my_hostname" -config openssl.cnf
+    openssl genrsa -out mongo.key 2048 &>>/work-dir/ssl.log
+    openssl req -new -key mongo.key -out mongo.csr -subj "/CN=$my_hostname" -config openssl.cnf &>>/work-dir/ssl.log
     openssl x509 -req -in mongo.csr \
         -CA "$ca_crt" -CAkey "$ca_key" -CAcreateserial \
-        -out mongo.crt -days 3650 -extensions v3_req -extfile openssl.cnf
+        -out mongo.crt -days 3650 -extensions v3_req -extfile openssl.cnf &>>/work-dir/ssl.log
 
     rm mongo.csr
     cat mongo.crt mongo.key > $pem
@@ -95,7 +97,7 @@ fi
 log "Peers: ${peers[*]}"
 
 log "Starting a MongoDB instance..."
-mongod --config /data/configdb/mongod.conf --dbpath=/data/db --replSet="$replica_set" --port=27017 "${auth_args[@]}" --bind_ip=0.0.0.0 >> /work-dir/log.txt 2>&1 &
+mongod --config /data/configdb/mongod.conf --dbpath=/data/db $mongod_ssl_args --replSet="$replica_set" --port=27017 "${auth_args[@]}" --bind_ip=0.0.0.0 >> /work-dir/mongolog.txt 2>&1 &
 
 log "Waiting for MongoDB to be ready..."
 until mongo "${ssl_args[@]}" --eval "db.adminCommand('ping')"; do
