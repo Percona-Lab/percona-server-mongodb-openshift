@@ -30,8 +30,10 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
       {{- end }}
     spec:
+{{ if eq .Values.platform "kubernetes" }}
       securityContext:
 {{ toYaml .Values.securityContext | indent 8 }}
+{{ end }}
       initContainers:
         - name: copy-config
           image: busybox

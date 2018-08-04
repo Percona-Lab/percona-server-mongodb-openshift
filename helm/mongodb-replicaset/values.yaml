@@ -1,6 +1,9 @@
 replicas: 3
 port: 27017
 
+## A chouce between "kubernetes" and "openshift"
+platform: "openshift" 
+
 replicaSetName: rs0
 
 podDisruptionBudget: {}
